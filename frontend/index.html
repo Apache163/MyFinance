@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyFinance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .balance {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .balance-amount {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .operations-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .operation {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .operation.income {
+            border-left: 4px solid #4CAF50;
+        }
+        .operation.expense {
+            border-left: 4px solid #f44336;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #eee;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="balance">
+            <div>Текущий баланс</div>
+            <div class="balance-amount" id="balance">0 ₽</div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('operations')">Операции</div>
+            <div class="tab" onclick="showTab('reports')">Отчеты</div>
+            <div class="tab" onclick="showTab('budgets')">Бюджеты</div>
+        </div>
+
+        <!-- Operations Tab -->
+        <div id="operations" class="tab-content active">
+            <div class="section">
+                <h2>Добавить операцию</h2>
+                <form id="operationForm">
+                    <div class="form-group">
+                        <label>Тип операции:</label>
+                        <select id="operationType" required>
+                            <option value="income">Доход</option>
+                            <option value="expense">Расход</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Сумма:</label>
+                        <input type="number" id="amount" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Категория:</label>
+                        <select id="category" required>
+                            <!-- Categories will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание:</label>
+                        <input type="text" id="description">
+                    </div>
+                    <div class="form-group">
+                        <label>Дата:</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <button type="submit">Добавить операцию</button>
+                </form>
+            </div>
+
+            <div class="section">
+                <h2>История операций</h2>
+                <div class="operations-list" id="operationsList">
+                    <!-- Operations will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="section">
+                <h2>Финансовый отчет</h2>
+                <div class="form-group">
+                    <label>Период с:</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                    <label>по:</label>
+                    <input type="date" id="endDate">
+                </div>
+                <button onclick="generateReport()">Сгенерировать отчет</button>
+                
+                <div id="reportResult" style="margin-top: 20px;">
+                    <!-- Report will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Budgets Tab -->
+        <div id="budgets" class="tab-content">
+            <div class="section">
+                <h2>Управление бюджетами</h2>
+                <form id="budgetForm">
+                    <div class="form-group">
+                        <label>Категория расходов:</label>
+                        <select id="budgetCategory" required>
+                            <!-- Expense categories will be populated -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Лимит бюджета:</label>
+                        <input type="number" id="budgetLimit" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Период (YYYY-MM):</label>
+                        <input type="text" id="budgetPeriod" required pattern="\d{4}-\d{2}">
+                    </div>
+                    <button type="submit">Создать бюджет</button>
+                </form>
+            </div>
+
+            <div class="section">
+                <h2>Текущие бюджеты</h2>
+                <div id="budgetsList">
+                    <!-- Budgets will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
