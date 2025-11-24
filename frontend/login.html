@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyFinance - Авторизация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        .logo p {
+            color: #666;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .switch-form {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .switch-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .switch-form a:hover {
+            text-decoration: underline;
+        }
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+        }
+        .demo-credentials {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .demo-credentials strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">
+            <h1>MyFinance</h1>
+            <p>Управление личными финансами</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="form-section active">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Вход в систему</h2>
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="loginEmail">Email:</label>
+                    <input type="email" id="loginEmail" required value="demo@myfinance.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Пароль:</label>
+                    <input type="password" id="loginPassword" required value="password">
+                </div>
+                <button type="submit">Войти</button>
+            </form>
+            
+            <div class="demo-credentials">
+                <strong>Демо доступ:</strong><br>
+                Email: demo@myfinance.com<br>
+                Пароль: password
+            </div>
+
+            <div class="switch-form">
+                Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a>
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="form-section">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Регистрация</h2>
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="registerEmail">Email:</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Пароль:</label>
+                    <input type="password" id="registerPassword" required minlength="6">
+                </div>
+                <button type="submit">Зарегистрироваться</button>
+            </form>
+
+            <div class="switch-form">
+                Есть аккаунт? <a href="#" id="showLogin">Войти</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Form switching
+        document.getElementById('showRegister').addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('register');
+        });
+
+        document.getElementById('showLogin').addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('login');
+        });
+
+        function showForm(formType) {
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('registerForm').classList.remove('active');
+            document.getElementById(formType + 'Form').classList.add('active');
+        }
+
+        // Login handler
+        document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('userEmail', result.user.email);
+                    window.location.href = 'index.html';
+                } else {
+                    alert(`Ошибка: ${result.error}`);
+                }
+            } catch (error) {
+                alert('Ошибка при входе в систему');
+            }
+        });
+
+        // Register handler
+        document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('userEmail', result.user.email);
+                    window.location.href = 'index.html';
+                } else {
+                    alert(`Ошибка: ${result.error}`);
+                }
+            } catch (error) {
+                alert('Ошибка при регистрации');
+            }
+        });
+
+        // Check if user is already logged in
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

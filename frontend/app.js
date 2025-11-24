@@ -1,5 +1,8 @@
 const API_BASE = 'http://localhost:3000/api';
-const USER_ID = 'user1';
+
+// Global state
+let currentUser = null;
+let authToken = localStorage.getItem('authToken');
 
 // Categories data
 const categories = {
@@ -21,34 +24,64 @@ const categories = {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
     initCategories();
-    loadUserData();
     setDefaultDates();
     
     // Form handlers
     document.getElementById('operationForm').addEventListener('submit', addOperation);
     document.getElementById('budgetForm').addEventListener('submit', addBudget);
     document.getElementById('operationType').addEventListener('change', updateCategories);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
 });
 
-function showTab(tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show selected tab
-    document.getElementById(tabName).classList.add('active');
-    event.target.classList.add('active');
+// Auth functions
+async function checkAuth() {
+    if (!authToken) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/me`, {
+            headers: {
+                'Authorization': authToken
+            }
+        });
+        
+        if (response.ok) {
+            currentUser = await response.json();
+            document.getElementById('userEmail').textContent = currentUser.email;
+            loadUserData();
+        } else {
+            logout();
+        }
+    } catch (error) {
+        logout();
+    }
 }
 
+async function logout() {
+    try {
+        await fetch(`${API_BASE}/auth/logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': authToken
+            }
+        });
+    } catch (error) {
+        // Ignore errors
+    }
+    
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userEmail');
+    window.location.href = 'login.html';
+}
+
+// Rest of the functions remain the same as before
 function initCategories() {
     updateCategories();
     
-    // Initialize budget categories (only expenses)
     const budgetCategorySelect = document.getElementById('budgetCategory');
     budgetCategorySelect.innerHTML = categories.expense.map(cat => 
         `<option value="${cat.value}">${cat.label}</option>`
@@ -77,15 +110,22 @@ function setDefaultDates() {
 
 async function loadUserData() {
     try {
-        const response = await fetch(`${API_BASE}/user/${USER_ID}`);
-        const userData = await response.json();
+        const response = await fetch(`${API_BASE}/user`, {
+            headers: {
+                'Authorization': authToken
+            }
+        });
         
-        updateBalance(userData.balance);
-        displayOperations(userData.operations);
-        displayBudgets(userData.budgets);
+        if (response.ok) {
+            const userData = await response.json();
+            updateBalance(userData.balance);
+            displayOperations(userData.operations);
+            displayBudgets(userData.budgets);
+        } else {
+            logout();
+        }
     } catch (error) {
         console.error('Error loading user data:', error);
-        alert('Ошибка загрузки данных');
     }
 }
 
@@ -161,10 +201,11 @@ async function addOperation(event) {
     };
     
     try {
-        const response = await fetch(`${API_BASE}/user/${USER_ID}/operations`, {
+        const response = await fetch(`${API_BASE}/operations`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': authToken
             },
             body: JSON.stringify(formData)
         });
@@ -172,19 +213,14 @@ async function addOperation(event) {
         const result = await response.json();
         
         if (response.ok) {
-            // Reset form
             document.getElementById('operationForm').reset();
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
             updateCategories();
-            
-            // Reload data
             loadUserData();
-            alert('Операция успешно добавлена!');
         } else {
             alert(`Ошибка: ${result.error}`);
         }
     } catch (error) {
-        console.error('Error adding operation:', error);
         alert('Ошибка при добавлении операции');
     }
 }
@@ -199,10 +235,11 @@ async function addBudget(event) {
     };
     
     try {
-        const response = await fetch(`${API_BASE}/user/${USER_ID}/budgets`, {
+        const response = await fetch(`${API_BASE}/budgets`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': authToken
             },
             body: JSON.stringify(formData)
         });
@@ -212,12 +249,10 @@ async function addBudget(event) {
         if (response.ok) {
             document.getElementById('budgetForm').reset();
             loadUserData();
-            alert('Бюджет успешно создан!');
         } else {
             alert(`Ошибка: ${result.error}`);
         }
     } catch (error) {
-        console.error('Error adding budget:', error);
         alert('Ошибка при создании бюджета');
     }
 }
@@ -233,13 +268,19 @@ async function generateReport() {
     
     try {
         const response = await fetch(
-            `${API_BASE}/user/${USER_ID}/reports?startDate=${startDate}&endDate=${endDate}`
+            `${API_BASE}/reports?startDate=${startDate}&endDate=${endDate}`,
+            {
+                headers: {
+                    'Authorization': authToken
+                }
+            }
         );
-        const report = await response.json();
         
-        displayReport(report);
+        if (response.ok) {
+            const report = await response.json();
+            displayReport(report);
+        }
     } catch (error) {
-        console.error('Error generating report:', error);
         alert('Ошибка генерации отчета');
     }
 }
@@ -267,4 +308,17 @@ function displayReport(report) {
     `;
     
     reportResult.innerHTML = html;
+}
+
+// Tab switching function
+function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
 }
